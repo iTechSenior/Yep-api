@@ -1,0 +1,124 @@
+# This is a sample build configuration for JavaScript.
+# Check our guides at https://confluence.atlassian.com/x/14UWN for more examples.
+# Only use spaces to indent your .yml configuration.
+# -----
+# You can specify a custom docker image from Docker Hub as your build environment.
+image: node:6.9.4
+
+pipelines:
+  branches:
+    master:
+      - step:
+          name: Build and test
+          image: node:8.6
+          script:
+            - npm test
+      - step:
+          trigger: manual # uncomment to have a manual step
+          # set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY as environment variables
+          name: Deploy to ECS
+          deployment: production # set to test, staging or production
+
+          image: atlassian/pipelines-awscli
+          services:
+            - docker
+          script:
+            - export AWS_DEFAULT_REGION=us-east-2
+
+            # aws login
+            - eval $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
+
+            # get the vars.js for environment variables
+            - aws s3 cp s3://prod-yep-api/ ./ --include "*" --recursive
+            - eval $(aws logs create-log-group --log-group-name $ECS_CLUSTER_NAME)
+
+            # docker
+            - export BUILD_ID=$BITBUCKET_BRANCH_$BITBUCKET_COMMIT_$BITBUCKET_BUILD_NUMBER
+            - export IMAGE_NAME=$AWS_REGISTRY_URL:$ECS_CLUSTER_NAME-v$BUILD_ID
+            - docker build -t $IMAGE_NAME .
+            - docker push $IMAGE_NAME
+            - docker tag $IMAGE_NAME $AWS_REGISTRY_URL:latest
+            - docker push $AWS_REGISTRY_URL:latest
+
+            # ECS variables
+            - export ECS_CLUSTER_NAME="$ECS_CLUSTER_NAME"
+            - export ECS_SERVICE_NAME="$ECS_SERVICE_NAME"
+            - export ECS_TASK_NAME="$ECS_TASK_NAME"
+            - export FAMILY="$FAMILY"
+
+            # Create ECS cluster, task, service
+            #- aws ecs list-clusters | grep "$ECS_CLUSTER_NAME" || aws ecs create-cluster --cluster-name "$ECS_CLUSTER_NAME"
+
+            # Updating the existing cluster, task, service
+            - export TASK_VERSION=$(aws ecs register-task-definition
+              --family "$ECS_TASK_NAME"
+              --network-mode "bridge"
+              --container-definitions
+              '[{"portMappings":[{"hostPort":5000,"containerPort":5000,"protocol":"tcp"}],"name":"'"$ECS_CLUSTER_NAME"'","image":"'"$IMAGE_NAME"'","essential":true,"cpu":768,"memoryReservation":768,"memory":1024,"logConfiguration":{"logDriver":"awslogs","options":{"awslogs-group":"'"$ECS_CLUSTER_NAME"'","awslogs-region":"'"$AWS_DEFAULT_REGION"'","awslogs-stream-prefix":"'"$FAMILY"'"}}}]'
+              | jq --raw-output '.taskDefinition.revision')
+            - echo "Registered ECS Task Definition:" "$TASK_VERSION"
+
+            # Create ECS Service
+            - aws ecs list-services --cluster "$ECS_CLUSTER_NAME"  | grep "$ECS_SERVICE_NAME" || aws ecs create-service --service-name "$ECS_SERVICE_NAME" --cluster "$ECS_CLUSTER_NAME" --task-definition "$ECS_TASK_NAME" --desired-count 1 --load-balancers '[{"targetGroupArn":"'"$ECS_TARGET_GROUP_ARN"'","containerName":"'"$ECS_CLUSTER_NAME"'","containerPort":5000}]'
+            - aws ecs update-service --cluster "$ECS_CLUSTER_NAME" --service "$ECS_SERVICE_NAME" --task-definition "$ECS_TASK_NAME:$TASK_VERSION"
+            # Follow https://docs.aws.amazon.com/AmazonECS/latest/developerguide/launch_container_instance.html for instrunctions
+            # needed to provide the compute resources (EC2 instances) that the tasks will run on.
+    staging:
+      - step:
+          name: Build and test
+          image: node:8.6
+          script:
+            - npm test
+      - step:
+          trigger: manual # uncomment to have a manual step
+          # set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY as environment variables
+          name: Deploy to ECS
+          deployment: staging # set to test, staging or production
+
+          image: atlassian/pipelines-awscli
+          services:
+            - docker
+          script:
+            # ECS variables
+            - export AWS_DEFAULT_REGION=us-east-2
+            - export ECS_CLUSTER_NAME=$STAGING_ECS_PREFIX
+            - export ECS_SERVICE_NAME=$STAGING_ECS_PREFIX-service
+            - export ECS_TASK_NAME=$STAGING_ECS_PREFIX-task
+            - export FAMILY=$FAMILY
+
+            # aws login
+            - eval $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
+
+            # get the vars.js for environment variables
+            - aws s3 cp s3://staging-yep-api/ ./ --include "*" --recursive
+            - eval $(aws logs create-log-group --log-group-name $ECS_CLUSTER_NAME)
+
+            # docker
+            - export BUILD_ID=$BITBUCKET_BRANCH_$BITBUCKET_COMMIT_$BITBUCKET_BUILD_NUMBER
+            - export IMAGE_NAME=$STAGING_AWS_REGISTRY_URL:$ECS_CLUSTER_NAME-v$BUILD_ID
+            - docker build -t $IMAGE_NAME .
+            - docker push $IMAGE_NAME
+            - docker tag $IMAGE_NAME $STAGING_AWS_REGISTRY_URL:latest
+            - docker push $STAGING_AWS_REGISTRY_URL:latest
+
+            # Create ECS cluster, task, service
+            #- aws ecs list-clusters | grep "$ECS_CLUSTER_NAME" || aws ecs create-cluster --cluster-name "$ECS_CLUSTER_NAME"
+
+            # Updating the existing cluster, task, service
+            - export TASK_VERSION=$(aws ecs register-task-definition
+              --family "$ECS_TASK_NAME"
+              --network-mode "bridge"
+              --container-definitions
+              '[{"portMappings":[{"hostPort":5000,"containerPort":5000,"protocol":"tcp"}],"name":"'"$ECS_CLUSTER_NAME"'","image":"'"$IMAGE_NAME"'","essential":true,"cpu":768,"memoryReservation":768,"memory":1024,"logConfiguration":{"logDriver":"awslogs","options":{"awslogs-group":"'"$ECS_CLUSTER_NAME"'","awslogs-region":"'"$AWS_DEFAULT_REGION"'","awslogs-stream-prefix":"'"$FAMILY"'"}}}]'
+              | jq --raw-output '.taskDefinition.revision')
+            - echo "Registered ECS Task Definition:" "$TASK_VERSION"
+
+            # Create ECS Service
+            - aws ecs list-services --cluster "$ECS_CLUSTER_NAME"  | grep "$ECS_SERVICE_NAME" || aws ecs create-service --service-name "$ECS_SERVICE_NAME" --cluster "$ECS_CLUSTER_NAME" --task-definition "$ECS_TASK_NAME" --desired-count 1 --load-balancers '[{"targetGroupArn":"'"$STAGING_ECS_TARGET_GROUP_ARN"'","containerName":"'"$ECS_CLUSTER_NAME"'","containerPort":5000}]'
+            - aws ecs update-service --cluster "$ECS_CLUSTER_NAME" --service "$ECS_SERVICE_NAME" --task-definition "$ECS_TASK_NAME:$TASK_VERSION"
+            # Follow https://docs.aws.amazon.com/AmazonECS/latest/developerguide/launch_container_instance.html for instrunctions
+            # needed to provide the compute resources (EC2 instances) that the tasks will run on.
+definitions:
+  services:
+    docker:
+      memory: 2048 # reduce memory for docker-in-docker from 1GB to 512MB

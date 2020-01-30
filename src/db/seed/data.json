@@ -1,0 +1,16 @@
+{
+  "test": [
+    {
+      "id": "test/1-A",
+      "title": "A test talk",
+      "abstract": "A talk abstract goes here",
+      "speaker": "speakers/1-A"
+    }
+  ],
+  "another": [
+    {
+      "id": "another/1-A",
+      "name": "Frond Yarnlander"
+    }
+  ]
+}

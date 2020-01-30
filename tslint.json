@@ -1,0 +1,63 @@
+{
+  "rules": {
+    "class-name": true,
+    "comment-format": [true, "check-space"],
+    "indent": [true, "spaces", 2],
+    "one-line": [true, "check-open-brace", "check-whitespace"],
+    "no-var-keyword": true,
+    "no-empty-interface": true,
+    "quotemark": [true, "single", "avoid-escape", "jsx-double"],
+    "semicolon": [true, "always", "ignore-bound-class-methods"],
+    "whitespace": [true, "check-branch", "check-decl", "check-operator", "check-module", "check-separator", "check-type"],
+    "prefer-for-of": true,
+    "no-return-await": true,
+    "promise-function-async": [true, "check-function-declaration", "check-method-declaration"],
+    "prefer-conditional-expression": [true, "check-else-if"],
+    "prefer-object-spread": true,
+    "eofline": true,
+    "no-duplicate-imports": true,
+    "array-type": [true, "array"],
+    "arrow-return-shorthand": true,
+    "increment-decrement": [true, "allow-post"],
+    "no-boolean-literal-compare": true,
+    "no-consecutive-blank-lines": [true, 2],
+    "variable-name": [true, "ban-keywords", "check-format", "allow-leading-underscore", "allow-pascal-case"],
+    "typedef-whitespace": [
+      true,
+      {
+        "call-signature": "nospace",
+        "index-signature": "nospace",
+        "parameter": "nospace",
+        "property-declaration": "nospace",
+        "variable-declaration": "nospace"
+      },
+      {
+        "call-signature": "onespace",
+        "index-signature": "onespace",
+        "parameter": "onespace",
+        "property-declaration": "onespace",
+        "variable-declaration": "onespace"
+      }
+    ],
+    "no-internal-module": true,
+    "no-trailing-whitespace": true,
+    "no-null-keyword": false,
+    "prefer-const": true,
+    "jsdoc-format": true,
+    "ordered-imports": [
+      false,
+      {
+        "grouped-imports": false,
+        "import-sources-order": "lowercase-last",
+        "named-imports-order": "lowercase-last",
+        "module-source-path": "basename"
+      }
+    ],
+    "import-spacing": true,
+    // "promise-function-async": true,
+    "only-arrow-functions": true,
+    "trailing-comma": true,
+    "triple-equals": true,
+    "space-within-parens": true
+  }
+}

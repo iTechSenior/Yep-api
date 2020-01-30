@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "target": "es2016",
+    "noImplicitAny": true,
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "lib": ["es2016", "esnext.asynciterable"],
+    "baseUrl": "src",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "paths": {
+      "@/db*": ["db*"],
+      "@/types*": ["schema/types*"],
+      "@/resolvers*": ["schema/resolvers*"],
+      "@/models*": ["db/types*"],
+      "@/helpers*": ["helpers*"],
+      "@/migration*": ["helpers*"],
+      "@/interfaces*": ["../src/interfaces*"]
+    }
+  },
+  "include": ["./"],
+  "exclude": ["./dev", "*.json", "*.js"]
+}
